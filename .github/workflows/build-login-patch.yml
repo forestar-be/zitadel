@@ -2,7 +2,7 @@ name: Build patched login image
 
 on:
   push:
-    branches: [fix/totp-session-lifetime]
+    branches: [deploy/totp-cookie-fix]
   workflow_dispatch:
 
 jobs:
@@ -28,6 +28,12 @@ jobs:
           registry: ghcr.io
           username: forestar-be
           password: ${{ secrets.PACKAGES_TOKEN }}
-      - run: docker build -t ghcr.io/forestar-be/zitadel-login:v4.16.2-totp-fix apps/login
-      - run: docker push ghcr.io/forestar-be/zitadel-login:v4.16.2-totp-fix
-      - run: docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/forestar-be/zitadel-login:v4.16.2-totp-fix
+      # Tag is unique per commit (short SHA) instead of a reused mutable tag,
+      # so a compose.yaml reference stays readable and unambiguous without
+      # needing to pin an opaque @sha256 digest to know which build it is.
+      - name: Compute image tag
+        id: image
+        run: echo "tag=v4.16.2-totp-fix-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+      - run: docker build -t ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }} apps/login
+      - run: docker push ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }}
+      - run: docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }}
