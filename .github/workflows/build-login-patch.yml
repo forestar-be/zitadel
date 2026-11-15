@@ -2,7 +2,7 @@ name: Build patched login image
 
 on:
   push:
-    branches: [deploy/totp-cookie-fix]
+    branches: [fix/securite-4.20.3]
   workflow_dispatch:
 
 jobs:
@@ -22,6 +22,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Unit tests of the sessions cookie (Forestar patch)
+        run: pnpm --dir apps/login exec vitest --run src/lib/server/cookies.test.ts
       - run: pnpm nx run login:build
       - uses: docker/login-action@v3
         with:
@@ -33,7 +35,7 @@ jobs:
       # needing to pin an opaque @sha256 digest to know which build it is.
       - name: Compute image tag
         id: image
-        run: echo "tag=v4.16.2-totp-fix-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=v4.20.3-cookie-fix-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
       - run: docker build -t ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }} apps/login
       - run: docker push ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }}
       - run: docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/forestar-be/zitadel-login:${{ steps.image.outputs.tag }}
