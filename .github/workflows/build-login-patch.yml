@@ -22,9 +22,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm nx run login:build
       - name: Unit tests of the sessions cookie (Forestar patch)
         run: pnpm --dir apps/login exec vitest --run src/lib/server/cookies.test.ts
-      - run: pnpm nx run login:build
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
