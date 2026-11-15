@@ -251,6 +251,32 @@ describe("cookies", () => {
       );
     });
 
+    it("sets a maxAge reaching the furthest session expiration (survives a browser restart)", async () => {
+      mockCookies.get.mockReturnValue(undefined);
+      const now = Date.now();
+      vi.mocked(timestampDate).mockImplementation((ts: any) => new Date(Number(ts.seconds) * 1000));
+      vi.mocked(timestampFromMs).mockImplementation((ms: number) => ({ seconds: BigInt(Math.floor(ms / 1000)) }) as any);
+
+      await addSessionToCookie({ session: { ...mockSession, expirationTs: `${now + 60 * 24 * 3600 * 1000}` } });
+
+      const maxAge = mockCookies.set.mock.calls[0][0].maxAge;
+      expect(maxAge).toBeGreaterThan(60 * 24 * 3600 - 5);
+      expect(maxAge).toBeLessThanOrEqual(60 * 24 * 3600);
+    });
+
+    it("omits maxAge when the expiration is missing or unparsable", async () => {
+      mockCookies.get.mockReturnValue(undefined);
+      vi.mocked(timestampDate).mockImplementation((ts: any) => new Date(Number(ts.seconds) * 1000));
+      vi.mocked(timestampFromMs).mockImplementation((ms: number) => ({ seconds: BigInt(Math.floor(ms / 1000)) }) as any);
+
+      await addSessionToCookie({ session: { ...mockSession, expirationTs: "" } });
+      expect(mockCookies.set.mock.calls[0][0]).not.toHaveProperty("maxAge");
+
+      mockCookies.set.mockClear();
+      await addSessionToCookie({ session: { ...mockSession, expirationTs: "not-a-number" } });
+      expect(mockCookies.set.mock.calls[0][0]).not.toHaveProperty("maxAge");
+    });
+
     it("should set sameSite to 'lax' when iFrameEnabled is false or undefined", async () => {
       mockCookies.get.mockReturnValue(undefined);
 
